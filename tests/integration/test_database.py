@@ -91,3 +91,32 @@ def test_car_survives_application_restart(database_path, car_payload):
         response = restarted_app.get(f"/api/cars/{created['id']}")
         assert response.status_code == 200
         assert response.json() == created
+def test_create_car(client: TestClient):
+    # 新增车辆
+    resp = client.post("/cars", json={
+        "make": "Tesla",
+        "model": "Model3",
+        "year": 2024
+    })
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["make"] == "Tesla"
+    car_id = data["id"]
+
+    # 查询
+    get_resp = client.get(f"/cars/{car_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["model"] == "Model3"
+
+    # 修改
+    put_resp = client.put(f"/cars/{car_id}", json={
+        "make": "Tesla",
+        "model": "Model3",
+        "year": 2025
+    })
+    assert put_resp.status_code == 200
+    assert put_resp.json()["year"] == 2025
+
+    # 删除
+    del_resp = client.delete(f"/cars/{car_id}")
+    assert del_resp.status_code == 204
