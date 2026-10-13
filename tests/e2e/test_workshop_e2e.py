@@ -22,28 +22,32 @@ def test_user_edits_car_and_change_survives_reload(page: Page, live_server):
     page.get_by_label("Year").fill("2022")
     page.get_by_role("button", name="Create car").click()
 
-    # 2.点击Edit car链接
+    # 2.点击Edit car链接，进入编辑表单
     page.get_by_role("link", name="Edit car").click()
 
-    # 3.修改：clear() 清空输入框，再填写新值
+    # 3.编辑：三个字段全部清空，完整重填（解决表单提交校验失败问题）
+    page.get_by_label("Make").clear()
+    page.get_by_label("Make").fill("Honda")
+
     page.get_by_label("Model").clear()
     page.get_by_label("Model").fill("Accord")
 
     page.get_by_label("Year").clear()
     page.get_by_label("Year").fill("2023")
 
-    # 点击保存，等待页面跳转回详情页面
+    # 点击保存按钮
     save_btn = page.get_by_role("button", name="Save changes")
     save_btn.click()
-    # 等待URL跳转到 /cars/{id} 详情页
+
+    # 等待页面跳转到详情页
     page.wait_for_url(re.compile(r"/cars/\d+$"))
 
-    # 4.断言详情页标题 Honda Accord
+    # 4.断言修改后的标题
     expect(page.get_by_role("heading", name="Honda Accord")).to_be_visible()
-    # 5.页面刷新，验证修改还在
+    # 5.刷新页面，持久化校验
     page.reload()
     expect(page.get_by_role("heading", name="Honda Accord")).to_be_visible()
 
-    # 使用id精准定位model、year字段
+    # 详情字段校验
     expect(page.locator("#car-model")).to_have_text("Accord")
     expect(page.locator("#car-year")).to_have_text('"2023"')
