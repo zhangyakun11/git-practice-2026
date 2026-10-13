@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
+from contextlib import asynccontextmanager
 from app.main import create_app
 
 @pytest.fixture
@@ -9,11 +10,10 @@ def database_path(tmp_path: Path) -> Path:
     return tmp_path / "test-cars.db"
 
 @pytest.fixture
-def client(database_path: Path) -> Iterator[TestClient]:
+async def client(database_path: Path):
     app = create_app(database_path)
-    # 手动触发lifespan事件，强制执行数据库表创建
-    import contextlib
-    with contextlib.asynccontextmanager(app.router.lifespan_context):
+    # 正确执行FastAPI lifespan生命周期，触发建表
+    async with app.router.lifespan_context(app):
         with TestClient(app) as test_client:
             yield test_client
 
