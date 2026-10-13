@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from app.main import create_app
 from app import database
 
-
+# ====================== 重点：顶格写，无缩进，注册命令行参数 ======================
 def pytest_addoption(parser):
     parser.addoption(
         "--show-browser",
