@@ -22,7 +22,7 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         else os.environ.get("CARS_DB_PATH", APP_DIR.parent / "cars.db")
     ).resolve()
 
-    # ✅ 新增：同步直接初始化数据库！解决TestClient不触发lifespan导致表不存在
+    # 【关键修复】同步直接初始化，TestClient调用create_app立刻建表，不走lifespan
     database.initialize(db_path)
 
     @asynccontextmanager
