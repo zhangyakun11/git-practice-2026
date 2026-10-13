@@ -25,12 +25,11 @@ def test_user_edits_car_and_change_survives_reload(page: Page, live_server):
     # 2.点击Edit car链接
     page.get_by_role("link", name="Edit car").click()
 
-    # 3.修改 model=Accord  year=2023
-    # select_text() 选中输入框原有内容，覆盖旧值
-    page.get_by_label("Model").select_text()
+    # 3.修改：clear() 清空输入框，再填写新值
+    page.get_by_label("Model").clear()
     page.get_by_label("Model").fill("Accord")
 
-    page.get_by_label("Year").select_text()
+    page.get_by_label("Year").clear()
     page.get_by_label("Year").fill("2023")
 
     # 点击保存，等待页面跳转回详情页面
