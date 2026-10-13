@@ -22,20 +22,17 @@ jobs:
       - name: Install dev dependencies
         run: python -m pip install -r requirements-dev.txt
 
-      - name: Initialize database (create tables)
-        run: python -c "from app.main import create_app; app = create_app('test.db')"
-
       - name: Install Playwright Chromium
         run: python -m playwright install --with-deps chromium
 
       - name: Run unit tests
-        run: python -m pytest tests/unit -q
+        run: python -m pytest tests/unit -v
 
       - name: Run integration tests
-        run: python -m pytest tests/integration -q
+        run: python -m pytest tests/integration -v
 
       - name: Run API tests
-        run: python -m pytest tests/api -q
+        run: python -m pytest tests/api -v
 
       - name: Run E2E tests
-        run: python -m pytest tests/e2e -q
+        run: python -m pytest tests/e2e -v
