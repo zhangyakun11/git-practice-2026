@@ -1,15 +1,12 @@
 """FastAPI routes: five JSON endpoints and plain HTML pages."""
-
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
-
 from fastapi import FastAPI, HTTPException, Path as PathParam, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from app import database
 from app.schemas import Car, CarInput
 
@@ -24,6 +21,9 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         if database_path is not None
         else os.environ.get("CARS_DB_PATH", APP_DIR.parent / "cars.db")
     ).resolve()
+
+    # ✅ 新增：同步直接初始化数据库！解决TestClient不触发lifespan导致表不存在
+    database.initialize(db_path)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
