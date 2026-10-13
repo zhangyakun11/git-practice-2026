@@ -10,10 +10,12 @@ def database_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def client(database_path: Path) -> Iterator[TestClient]:
-    # create_app内部 lifespan 会自动创建数据表
     app = create_app(database_path)
-    with TestClient(app) as test_client:
-        yield test_client
+    # 手动触发lifespan事件，强制执行数据库表创建
+    import contextlib
+    with contextlib.asynccontextmanager(app.router.lifespan_context):
+        with TestClient(app) as test_client:
+            yield test_client
 
 @pytest.fixture
 def car_payload() -> dict:
