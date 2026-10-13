@@ -59,4 +59,4 @@ def test_user_edits_car_and_change_survives_reload(page: Page, live_server):
 
     # 校验详情字段
     expect(page.locator("#car-model")).to_have_text("Accord")
-    expect(page.locator("#car-year")).to_have_text('"2023"')
+    expect(page.locator("#car-year")).to_have_text("2023")
