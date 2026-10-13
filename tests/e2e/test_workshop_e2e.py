@@ -25,26 +25,38 @@ def test_user_edits_car_and_change_survives_reload(page: Page, live_server):
     # 2.点击Edit car链接，进入编辑表单
     page.get_by_role("link", name="Edit car").click()
 
-    # 3.编辑：三个字段全部清空，完整重填
-    page.get_by_label("Make").clear()
-    page.get_by_label("Make").fill("Honda")
+    # =====修复核心：受控表单，使用键盘快捷键删除原有内容=====
+    # Make
+    make_input = page.get_by_label("Make")
+    make_input.click()
+    make_input.press("Control+A")
+    make_input.press("Backspace")
+    make_input.fill("Honda")
 
-    page.get_by_label("Model").clear()
-    page.get_by_label("Model").fill("Accord")
+    # Model
+    model_input = page.get_by_label("Model")
+    model_input.click()
+    model_input.press("Control+A")
+    model_input.press("Backspace")
+    model_input.fill("Accord")
 
-    page.get_by_label("Year").clear()
-    page.get_by_label("Year").fill("2023")
+    # Year
+    year_input = page.get_by_label("Year")
+    year_input.click()
+    year_input.press("Control+A")
+    year_input.press("Backspace")
+    year_input.fill("2023")
 
-    # =========方案B核心改动：不用点击Save按钮，直接回车提交表单 =========
-    page.get_by_label("Year").press("Enter")
+    # 点击保存按钮提交表单
+    page.get_by_role("button", name="Save changes").click()
 
-    # 等待修改后的标题出现，延长超时时间
+    # 等待跳转到详情页，校验标题
     expect(page.get_by_role("heading", name="Honda Accord")).to_be_visible(timeout=8000)
 
-    # 5.刷新页面，持久化校验
+    # 刷新页面，校验持久化保存
     page.reload()
     expect(page.get_by_role("heading", name="Honda Accord")).to_be_visible(timeout=8000)
 
-    # 详情字段校验
+    # 校验详情字段
     expect(page.locator("#car-model")).to_have_text("Accord")
     expect(page.locator("#car-year")).to_have_text('"2023"')
