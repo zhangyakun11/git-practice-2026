@@ -5,81 +5,64 @@ import threading
 import time
 from collections.abc import Iterator
 from pathlib import Path
+
 import pytest
 import uvicorn
-import requests
-from fastapi.testclient import TestClient
 
 from app.main import create_app
-from app import database
 
-# ====================== 重点：顶格写，无缩进，注册命令行参数 ======================
+
 def pytest_addoption(parser):
     parser.addoption(
         "--show-browser",
         action="store_true",
         default=False,
-        help="Run playwright tests with browser window visible (not headless)"
+        help="Show browser window when running E2E tests (not headless)"
     )
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def live_server(tmp_path: Path) -> Iterator[str]:
-    # Reserve a free port instead of hard-coding 8000 or racing another process.
+    # 自动获取空闲端口，避免端口占用冲突
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         host, port = sock.getsockname()
-        db_path = tmp_path / "browser-cars.db"
-        app = create_app(db_path)
-        config = uvicorn.Config(
-            app,
-            host=host,
-            port=port,
-            log_level="error",
-            ws="none",
-        )
-        server = uvicorn.Server(config)
-        # Start server in background thread
-        thread = threading.Thread(target=server.run)
-        thread.daemon = True
-        thread.start()
-        base_url = f"http://{host}:{port}"
-        # Wait for server to be ready
-        for _ in range(10):
-            try:
-                requests.get(base_url, timeout=1)
-                break
-            except Exception:
-                time.sleep(0.3)
-        yield base_url
-        # Shutdown server
-        server.should_exit = True
-        thread.join(timeout=2)
+
+    config = uvicorn.Config(
+        create_app(tmp_path / "browser-cars.db"),
+        host=host,
+        port=port,
+        log_level="error",
+        ws="none",
+    )
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run)
+    thread.start()
+
+    # 等待服务启动
+    for _ in range(20):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((host, port))
+            break
+        except ConnectionRefusedError:
+            time.sleep(0.2)
+
+    yield f"http://{host}:{port}"
+    server.should_exit = True
+    thread.join()
 
 
-@pytest.fixture(scope="function")
-def playwright_context(playwright, request, live_server):
-    headed = request.config.getoption("--show-browser")
-    browser = playwright.chromium.launch(headless=not headed)
-    context = browser.new_context(base_url=live_server)
+@pytest.fixture
+def playwright_context(playwright, request):
+    show_browser = request.config.getoption("--show-browser")
+    browser = playwright.chromium.launch(headless=not show_browser)
+    context = browser.new_context()
     yield context
     context.close()
     browser.close()
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def page(playwright_context):
-    page = playwright_context.new_page()
-    yield page
-    page.close()
-
-
-# API集成测试用的TestClient，每次自动初始化全新数据库
-@pytest.fixture(scope="function")
-def client(tmp_path: Path):
-    # 为集成测试创建临时db文件
-    db_file = tmp_path / "test_cars.db"
-    # 初始化数据库，执行建表语句
-    database.init_db(db_file)
-    app = create_app(db_file)
-    yield TestClient(app)
+    return playwright_context.new_page()
