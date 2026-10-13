@@ -3,10 +3,15 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
+from app import database
 
 @pytest.fixture
 def database_path(tmp_path: Path) -> Path:
     return tmp_path / "test-cars.db"
+
+@pytest.fixture(autouse=True)
+def init_db_for_integration_tests(database_path):
+    database.initialize(database_path)
 
 @pytest.fixture
 def client(database_path: Path) -> Iterator[TestClient]:
