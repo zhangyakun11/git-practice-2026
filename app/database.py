@@ -74,3 +74,18 @@ def delete_car(database_path: Path, car_id: int) -> bool:
     with connect(database_path) as connection:
         cursor = connection.execute("DELETE FROM cars WHERE id = ?", (car_id,))
         return cursor.rowcount == 1
+from pathlib import Path
+import sqlite3
+
+def init_db(database_path: Path):
+    with sqlite3.connect(database_path) as conn:
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS cars (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            make TEXT NOT NULL,
+            model TEXT NOT NULL,
+            year INTEGER NOT NULL,
+            color TEXT
+        )
+        """)
+        conn.commit()
