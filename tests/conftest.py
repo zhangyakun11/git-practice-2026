@@ -77,3 +77,17 @@ def page(playwright_context):
     page = playwright_context.new_page()
     yield page
     page.close()
+from pathlib import Path
+import pytest
+from fastapi.testclient import TestClient
+from app.main import create_app
+from app import database
+
+@pytest.fixture(scope="function")
+def client(tmp_path: Path):
+    # 为集成测试创建临时db文件
+    db_file = tmp_path / "test_cars.db"
+    # 初始化数据库，执行建表语句
+    database.init_db(db_file)
+    app = create_app(db_file)
+    yield TestClient(app)
