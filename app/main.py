@@ -1,15 +1,12 @@
 """FastAPI routes: five JSON endpoints and plain HTML pages."""
-
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
-
 from fastapi import FastAPI, HTTPException, Path as PathParam, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from app import database
 from app.schemas import Car, CarInput
 
@@ -25,8 +22,12 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         else os.environ.get("CARS_DB_PATH", APP_DIR.parent / "cars.db")
     ).resolve()
 
+    # ====================== ✅新增：函数顶层！不在lifespan内部 ======================
+    database.initialize(db_path)
+
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        # 这里保留，uvicorn真实服务启动依旧执行一遍，不用删除
         database.initialize(db_path)
         yield
 
