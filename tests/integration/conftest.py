@@ -1,4 +1,5 @@
 import pytest
+import sqlite3
 from pathlib import Path
 from fastapi.testclient import TestClient
 from app.main import create_app
@@ -6,11 +7,9 @@ from app.main import create_app
 @pytest.fixture
 def client(tmp_path: Path):
     test_db_file = tmp_path / "testcars.db"
-    app = create_app(database_path=test_db_file)
 
-    # 【关键改动】直接用app内部的数据库连接去建表，共用同一个数据库连接
-    from app.database import get_db
-    with next(get_db()) as conn:
+    # 建表，并且不立刻关闭连接，上下文管理器保证写完再退出
+    with sqlite3.connect(test_db_file) as conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS cars (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,5 +21,10 @@ def client(tmp_path: Path):
         """)
         conn.commit()
 
-    with TestClient(app) as c:
-        yield c
+    # 强制sync，Linux CI刷新磁盘，确保表已经持久化写入
+    import os
+    os.sync()
+
+    app = create_app(database_path=test_db_file)
+    with TestClient(app) as test_client:
+        yield test_client
