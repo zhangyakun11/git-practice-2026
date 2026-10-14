@@ -5,3 +5,4 @@ pytest-playwright
 playwright
 httpx
 sqlalchemy
+PyMySQL[rsa]>=1.1,<2

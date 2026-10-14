@@ -23,7 +23,9 @@ def client(tmp_path: Path):
 
     # 强制sync，Linux CI刷新磁盘，确保表已经持久化写入
     import os
-    os.sync()
+    import sys
+    if sys.platform != "win32":
+        os.sync()
 
     app = create_app(database_path=test_db_file)
     with TestClient(app) as test_client:

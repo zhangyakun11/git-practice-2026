@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+
+# Testing / CI
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+
+# Local database and env files
+cars.db
+.env
+.env.*
+
+# Node / frontend build (not used here)
+node_modules/
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+compose.yaml

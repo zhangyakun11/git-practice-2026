@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Path as PathParam, Response, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from app import database
+from app import database, mysql_database
 from app.schemas import Car, CarInput
 
 APP_DIR = Path(__file__).resolve().parent
@@ -22,20 +22,27 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         else os.environ.get("CARS_DB_PATH", APP_DIR.parent / "cars.db")
     ).resolve()
 
-    # ====================== ✅新增：函数顶层！不在lifespan内部 ======================
-    database.initialize(db_path)
+    # Tests passing a SQLite file path always keep using SQLite.
+    storage = (
+        mysql_database
+        if database_path is None and os.getenv("CARS_DB_BACKEND") == "mysql"
+        else database
+    )
+
+    # Initialize the selected backend
+    storage.initialize(db_path)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        # 这里保留，uvicorn真实服务启动依旧执行一遍，不用删除
-        database.initialize(db_path)
+        # Initialize again on startup (idempotent)
+        storage.initialize(db_path)
         yield
 
     application = FastAPI(title="Cars API", version="1.0.0", lifespan=lifespan)
     application.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
 
     def require_car(car_id: int) -> Car:
-        car = database.get_car(db_path, car_id)
+        car = storage.get_car(db_path, car_id)
         if car is None:
             raise HTTPException(status_code=404, detail="Car not found")
         return car
@@ -61,13 +68,13 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     @application.get("/api/cars", response_model=list[Car], tags=["cars"])
     def list_cars() -> list[Car]:
-        return database.list_cars(db_path)
+        return storage.list_cars(db_path)
 
     @application.post(
         "/api/cars", response_model=Car, status_code=status.HTTP_201_CREATED, tags=["cars"]
     )
     def create_car(car: CarInput, response: Response) -> Car:
-        created = database.create_car(db_path, car)
+        created = storage.create_car(db_path, car)
         response.headers["Location"] = f"/api/cars/{created.id}"
         return created
 
@@ -77,14 +84,14 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
 
     @application.put("/api/cars/{car_id}", response_model=Car, tags=["cars"])
     def update_car(car_id: CarId, car: CarInput) -> Car:
-        updated = database.update_car(db_path, car_id, car)
+        updated = storage.update_car(db_path, car_id, car)
         if updated is None:
             raise HTTPException(status_code=404, detail="Car not found")
         return updated
 
     @application.delete("/api/cars/{car_id}", status_code=204, tags=["cars"])
     def delete_car(car_id: CarId) -> Response:
-        if not database.delete_car(db_path, car_id):
+        if not storage.delete_car(db_path, car_id):
             raise HTTPException(status_code=404, detail="Car not found")
         return Response(status_code=204)
 
