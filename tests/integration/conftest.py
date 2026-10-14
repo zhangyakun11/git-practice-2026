@@ -2,8 +2,10 @@ import pytest
 from fastapi.testclient import TestClient
 from app.main import create_app
 
+
 @pytest.fixture
-def client():
-    app = create_app()
-    with TestClient(app) as test_client:
-        yield test_client
+def client(tmp_path):
+    test_db_file = tmp_path / "testcars.db"
+    app = create_app(database_path=test_db_file)
+    with TestClient(app) as c:
+        yield c
