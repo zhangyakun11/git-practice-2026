@@ -22,11 +22,12 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         else os.environ.get("CARS_DB_PATH", APP_DIR.parent / "cars.db")
     ).resolve()
 
-    # 【关键修复】同步直接初始化，TestClient调用create_app立刻建表，不走lifespan
+    # ✅【函数顶层，lifespan定义之前，强制初始化建表！】
     database.initialize(db_path)
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        # uvicorn线上服务启动时再跑一遍，保留不动
         database.initialize(db_path)
         yield
 
